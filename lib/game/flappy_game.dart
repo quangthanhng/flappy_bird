@@ -1,5 +1,6 @@
 import 'dart:math';
 
+import 'package:flame/components.dart';
 import 'package:flame/events.dart';
 import 'package:flame/game.dart';
 import 'package:flutter/material.dart';
@@ -14,7 +15,8 @@ class FlappyGame extends FlameGame with TapCallbacks {
 
   final GameController controller;
 
-  final BirdComponent _bird = BirdComponent();
+  BirdComponent? _bird;
+  bool _birdReady = false;
   final List<PipePair> _pipes = [];
 
   Vector2 _screenSize = Vector2.zero();
@@ -30,7 +32,10 @@ class FlappyGame extends FlameGame with TapCallbacks {
   @override
   Future<void> onLoad() async {
     await super.onLoad();
-    add(_bird);
+    final image = await images.load('image.png');
+    _bird = BirdComponent(sprite: Sprite(image));
+    _birdReady = true;
+    add(_bird!);
   }
 
   @override
@@ -38,19 +43,25 @@ class FlappyGame extends FlameGame with TapCallbacks {
     super.onGameResize(size);
     _screenSize = size;
     _groundHeight = max<double>(70.0, size.y * 0.12);
-    resetForMenu();
+    final phase = controller.snapshot.phase;
+    if (phase == GamePhase.menu || phase == GamePhase.ready) {
+      resetForMenu();
+    }
   }
 
   void resetForMenu() {
     if (_screenSize.x == 0 || _screenSize.y == 0) {
       return;
     }
+    if (!_birdReady || _bird == null) {
+      return;
+    }
     _pipes.clear();
     _spawnTimer = 0;
     _bobTime = 0;
-    _bird.velocity = 0;
-    _bird.angle = 0;
-    _bird.position = _birdStart;
+    _bird!.velocity = 0;
+    _bird!.angle = 0;
+    _bird!.position = _birdStart;
   }
 
   void resetForNewRound() {
@@ -61,6 +72,9 @@ class FlappyGame extends FlameGame with TapCallbacks {
   void onTapDown(TapDownEvent event) {
     super.onTapDown(event);
     final phase = controller.snapshot.phase;
+    if (!_birdReady || _bird == null) {
+      return;
+    }
 
     if (phase == GamePhase.menu) {
       controller.startGame();
@@ -79,7 +93,7 @@ class FlappyGame extends FlameGame with TapCallbacks {
   }
 
   void _flap() {
-    _bird.velocity = _flapVelocity;
+    _bird!.velocity = _flapVelocity;
     controller.playFlapSound();
   }
 
@@ -90,12 +104,15 @@ class FlappyGame extends FlameGame with TapCallbacks {
     if (_screenSize.x == 0 || _screenSize.y == 0) {
       return;
     }
+    if (!_birdReady || _bird == null) {
+      return;
+    }
 
     final phase = controller.snapshot.phase;
 
     if (phase == GamePhase.ready) {
       _bobTime += dt;
-      _bird.position = _birdStart + Vector2(0, sin(_bobTime * 3) * 6);
+      _bird!.position = _birdStart + Vector2(0, sin(_bobTime * 3) * 6);
       return;
     }
 
@@ -103,9 +120,9 @@ class FlappyGame extends FlameGame with TapCallbacks {
       return;
     }
 
-    _bird.velocity += _gravity * dt;
-    _bird.position.y += _bird.velocity * dt;
-    _bird.angle = (_bird.velocity / 500).clamp(-0.7, 0.7);
+    _bird!.velocity += _gravity * dt;
+    _bird!.position.y += _bird!.velocity * dt;
+    _bird!.angle = (_bird!.velocity / 500).clamp(-0.7, 0.7);
 
     _spawnTimer += dt;
     if (_spawnTimer >= _spawnInterval) {
@@ -115,7 +132,7 @@ class FlappyGame extends FlameGame with TapCallbacks {
 
     for (final pipe in _pipes) {
       pipe.x -= _pipeSpeed * dt;
-      if (!pipe.passed && pipe.x + pipe.width < _bird.position.x) {
+      if (!pipe.passed && pipe.x + pipe.width < _bird!.position.x) {
         pipe.passed = true;
         controller.addScore();
       }
@@ -123,7 +140,7 @@ class FlappyGame extends FlameGame with TapCallbacks {
 
     _pipes.removeWhere((pipe) => pipe.x + pipe.width < -20);
 
-    final birdRect = _bird.hitbox;
+    final birdRect = _bird!.hitbox;
     if (_hitGround(birdRect) || _hitCeiling(birdRect)) {
       controller.playHitSound();
       controller.gameOver();

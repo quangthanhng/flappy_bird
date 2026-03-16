@@ -2,18 +2,21 @@ import 'package:flame/components.dart';
 import 'package:flutter/material.dart';
 
 class BirdComponent extends PositionComponent {
-  BirdComponent() {
+  BirdComponent({required this.sprite}) {
     size = Vector2(46, 34);
     anchor = Anchor.center;
   }
 
+  final Sprite sprite;
   double velocity = 0;
 
   Rect get hitbox {
+    final hitWidth = size.x * 0.72;
+    final hitHeight = size.y * 0.72;
     return Rect.fromCenter(
       center: Offset(position.x, position.y),
-      width: size.x,
-      height: size.y,
+      width: hitWidth,
+      height: hitHeight,
     );
   }
 
@@ -21,40 +24,23 @@ class BirdComponent extends PositionComponent {
   void render(Canvas canvas) {
     super.render(canvas);
 
-    final bodyPaint = Paint()..color = const Color(0xFFF7D21F);
-    final bellyPaint = Paint()..color = const Color(0xFFFDE68A);
-    final eyePaint = Paint()..color = Colors.white;
-    final pupilPaint = Paint()..color = Colors.black87;
-    final beakPaint = Paint()..color = const Color(0xFFF59E0B);
-
-    final bodyRect = Rect.fromLTWH(-size.x / 2, -size.y / 2, size.x, size.y);
-    final bodyRRect = RRect.fromRectAndRadius(
-      bodyRect,
-      const Radius.circular(12),
+    final diameter = size.x < size.y ? size.x : size.y;
+    final rect = Rect.fromCenter(
+      center: Offset.zero,
+      width: diameter,
+      height: diameter,
     );
+    final clip = Path()..addOval(rect);
 
-    canvas.drawRRect(bodyRRect, bodyPaint);
-    canvas.drawRRect(
-      RRect.fromRectAndRadius(
-        Rect.fromLTWH(
-          -size.x / 2 + 6,
-          -size.y / 2 + 10,
-          size.x - 14,
-          size.y / 2,
-        ),
-        const Radius.circular(10),
-      ),
-      bellyPaint,
-    );
+    canvas.save();
+    canvas.clipPath(clip);
+    sprite.renderRect(canvas, rect);
+    canvas.restore();
 
-    canvas.drawCircle(const Offset(8, -4), 6, eyePaint);
-    canvas.drawCircle(const Offset(10, -4), 3, pupilPaint);
-
-    final beakPath = Path()
-      ..moveTo(size.x / 2 - 2, 0)
-      ..lineTo(size.x / 2 + 10, 4)
-      ..lineTo(size.x / 2 - 2, 8)
-      ..close();
-    canvas.drawPath(beakPath, beakPaint);
+    final borderPaint = Paint()
+      ..color = const Color(0xFFFACC15)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2;
+    canvas.drawOval(rect, borderPaint);
   }
 }
